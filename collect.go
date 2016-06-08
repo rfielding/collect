@@ -153,7 +153,12 @@ func render(msg string, fields ...NamedParm) {
 					if i > 0 {
 						w.Write([]byte(","))
 					}
-					w.Write([]byte(fmt.Sprintf("\"%s\"=\"%s\"", f.Key, Val(f))))
+					switch f.VType {
+					case TString:
+						w.Write([]byte(fmt.Sprintf("\"%s\"=\"%s\"", f.Key, Val(f))))
+					case TInt64, TFloat64:
+						w.Write([]byte(fmt.Sprintf("\"%s\"=%s", f.Key, Val(f))))
+					}
 					i++
 				}
 			}
