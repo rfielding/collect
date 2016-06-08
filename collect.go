@@ -25,15 +25,19 @@ type Txn struct {
 	Session   string
 	Begin     int64
 	End       int64
-	Bytes     int64
-	Direction string
+	Bytes   int64
+	Type string
 }
 
 type GStat struct {
-	Bytes     int64
-	Diff      int64
-	Direction string
-	Count     int64
+	Bytes int64
+	Diff  int64
+	Count int64
+}
+
+type GStats struct {
+	Up   GStat
+	Down GStat
 }
 
 //Duplicating this because zap's members are private.  :-(
@@ -170,19 +174,17 @@ func render(msg string, fields ...NamedParm) {
 }
 
 func main() {
+	//logger.SetLevel(-1)
 	err := commandSetup()
 	if err != nil {
 		logger.Error("command setup", zap.String("err", err.Error()))
 		os.Exit(-1)
 	}
-	txnBegin := "transaction begin"
+	txnBegin := "transaction start"
 	txnEnd := "transaction end"
 	txnUp := "transaction up"
 	txnDown := "transaction down"
-	gstats := make(map[string]*GStat)
-	gstats[txnUp] = &GStat{Direction: txnUp}
-	gstats[txnDown] = &GStat{Direction: txnDown}
-
+	gstats := GStats{}
 	txns := make(map[string]*Txn)
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -216,11 +218,14 @@ func main() {
 					fields, fields_ok := record["fields"].(map[string]interface{})
 					if msg_ok && fields_ok && ts_ok {
 						session, session_ok := fields["session"].(string)
+						//Convert to s
 						tsVal, err := ts.Int64()
+						tsVal = tsVal / (1000*1000)
 						if err != nil {
 							logger.Error("ts convert fail", zap.Object("ts", ts))
 						}
 						if session_ok {
+							logger.Debug(msg)
 							switch msg {
 							case txnBegin:
 								txns[session] = &Txn{Session: session}
@@ -230,21 +235,23 @@ func main() {
 								txn := txns[session]
 								if txn != nil {
 									txn.End = tsVal
-									diff := float64(txn.End - txn.Begin)
-									xput := float64(txn.Bytes) / diff
+									diff := (txn.End - txn.Begin)
+									xput := float64(txn.Bytes) / float64(diff)
 									if doStat {
 										render(
 											"txn",
 											Float64("throughput", xput),
 											String("session", session),
-											String("counter", txn.Direction),
+											String("counter", txn.Type),
 											Int64("latency", txn.End-txn.Begin),
 										)
 									}
-									txns[session] = nil
-									gstats[txn.Direction].Bytes += txn.Bytes
-									gstats[txn.Direction].Diff += txn.End - txn.Begin
-									gstats[txn.Direction].Count += int64(1)
+									gstats.Up.Diff += diff
+									gstats.Up.Count += int64(1)
+									gstats.Down.Diff += diff
+									gstats.Down.Count += int64(1)
+								} else {
+									logger.Error("end without begin", zap.String("session", session))
 								}
 							case txnDown, txnUp:
 								bytes, bytes_ok := fields["bytes"].(json.Number)
@@ -255,8 +262,18 @@ func main() {
 									}
 									txn := txns[session]
 									if txn != nil {
-										txn.Bytes = bytesVal
-										txn.Direction = msg
+										switch msg {
+										case txnUp:
+											txn.Type = txnUp
+											txn.Bytes += bytesVal
+											gstats.Up.Bytes += bytesVal
+										case txnDown:
+											txn.Type = txnDown
+											txn.Bytes += bytesVal
+											gstats.Down.Bytes += bytesVal
+										}
+									} else {
+										logger.Error("count without begin", zap.String("session", session))
 									}
 								}
 							}
@@ -267,17 +284,21 @@ func main() {
 		}
 	}
 	if doGstat {
-		for k, v := range gstats {
-			xput := float64(v.Bytes) / float64(v.Diff)
-			latency := float64(v.Diff) / float64(v.Count)
-			bytes := float64(v.Bytes) / float64(v.Count)
-			render(
-				"gstat",
-				String("counter", k),
-				Float64("throughput", xput),
-				Float64("latency", latency),
-				Float64("bytes", bytes),
-			)
-		}
+		renderGStat(&gstats.Up, "gstat up")
+		renderGStat(&gstats.Down, "gstat down")
 	}
+}
+
+func renderGStat(g *GStat, nm string) {
+	xput := (float64(g.Bytes) / float64(g.Diff)) 
+	latency := float64(g.Diff) / float64(g.Count)
+	bytes := float64(g.Bytes) / float64(g.Count)
+
+	render(
+		nm,
+		String("counter", nm),
+		Float64("throughput", xput),
+		Float64("latency", latency),
+		Float64("bytes", bytes),
+	)
 }
