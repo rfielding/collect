@@ -24,6 +24,7 @@ type GStat struct {
 	Bytes     int64
 	Diff      int64
 	Direction string
+	Count     int64
 }
 
 func main() {
@@ -78,11 +79,14 @@ func main() {
 								logger.Info(
 									"txn",
 									zap.Float64("throughput", xput),
+									zap.String("session", session),
 									zap.String("direction", txn.Direction),
+									zap.Int64("latency", txn.End-txn.Begin),
 								)
 								txns[session] = nil
 								gstats[txn.Direction].Bytes += txn.Bytes
 								gstats[txn.Direction].Diff += txn.End - txn.Begin
+								gstats[txn.Direction].Count += int64(1)
 							case "txn down", "txn up":
 								logger.Debug("bytes")
 								bytes, bytes_ok := fields["bytes"].(json.Number)
@@ -103,10 +107,12 @@ func main() {
 	}
 	for k, v := range gstats {
 		xput := float64(v.Bytes) / float64(v.Diff)
+		latency := float64(v.Diff) / float64(v.Count)
 		logger.Info(
 			"gstat",
 			zap.String("direction", k),
 			zap.Float64("throughput", xput),
+			zap.Float64("latency", latency),
 		)
 	}
 }
