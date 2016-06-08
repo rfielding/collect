@@ -175,18 +175,23 @@ func main() {
 		logger.Error("command setup", zap.String("err", err.Error()))
 		os.Exit(-1)
 	}
-
+	txnBegin := "transaction begin"
+	txnEnd := "transaction end"
+	txnUp := "transaction up"
+	txnDown := "transaction down"
 	gstats := make(map[string]*GStat)
-	gstats["txn up"] = &GStat{Direction: "txn up"}
-	gstats["txn down"] = &GStat{Direction: "txn down"}
+	gstats[txnUp] = &GStat{Direction: txnUp}
+	gstats[txnDown] = &GStat{Direction: txnDown}
 
 	txns := make(map[string]*Txn)
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) > 0 && line[0] != '{' {
-			idx := strings.Index(line, " ")
-			line = line[idx+1:]
+			idx := strings.Index(line, "{")
+			if idx > 0 {
+				line = line[idx:]
+			}
 		}
 		if line != "" {
 			var obj interface{}
@@ -217,37 +222,42 @@ func main() {
 						}
 						if session_ok {
 							switch msg {
-							case "txn begin":
+							case txnBegin:
 								txns[session] = &Txn{Session: session}
 								txns[session].Session = session
 								txns[session].Begin = tsVal
-							case "txn end":
-								txns[session].End = tsVal
+							case txnEnd:
 								txn := txns[session]
-								diff := float64(txn.End - txn.Begin)
-								xput := float64(txn.Bytes) / diff
-								if doStat {
-									render(
-										"txn",
-										Float64("throughput", xput),
-										String("session", session),
-										String("counter", txn.Direction),
-										Int64("latency", txn.End-txn.Begin),
-									)
+								if txn != nil {
+									txn.End = tsVal
+									diff := float64(txn.End - txn.Begin)
+									xput := float64(txn.Bytes) / diff
+									if doStat {
+										render(
+											"txn",
+											Float64("throughput", xput),
+											String("session", session),
+											String("counter", txn.Direction),
+											Int64("latency", txn.End-txn.Begin),
+										)
+									}
+									txns[session] = nil
+									gstats[txn.Direction].Bytes += txn.Bytes
+									gstats[txn.Direction].Diff += txn.End - txn.Begin
+									gstats[txn.Direction].Count += int64(1)
 								}
-								txns[session] = nil
-								gstats[txn.Direction].Bytes += txn.Bytes
-								gstats[txn.Direction].Diff += txn.End - txn.Begin
-								gstats[txn.Direction].Count += int64(1)
-							case "txn down", "txn up":
+							case txnDown, txnUp:
 								bytes, bytes_ok := fields["bytes"].(json.Number)
 								if bytes_ok {
 									bytesVal, err := bytes.Int64()
 									if err != nil {
 										logger.Error("bytes convert fail", zap.Object("bytes", bytes))
 									}
-									txns[session].Bytes = bytesVal
-									txns[session].Direction = msg
+									txn := txns[session]
+									if txn != nil {
+										txn.Bytes = bytesVal
+										txn.Direction = msg
+									}
 								}
 							}
 						}
