@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/uber-go/zap"
 	"os"
 )
@@ -49,6 +50,7 @@ func main() {
 					zap.String("line", line),
 				)
 			} else {
+				fmt.Println(line)
 				logger.Debug("json")
 				record, record_ok := obj.(map[string]interface{})
 				if record_ok {
@@ -108,11 +110,13 @@ func main() {
 	for k, v := range gstats {
 		xput := float64(v.Bytes) / float64(v.Diff)
 		latency := float64(v.Diff) / float64(v.Count)
+		bytes := float64(v.Bytes) / float64(v.Count)
 		logger.Info(
 			"gstat",
 			zap.String("direction", k),
 			zap.Float64("throughput", xput),
 			zap.Float64("latency", latency),
+			zap.Float64("bytes", bytes),
 		)
 	}
 }
