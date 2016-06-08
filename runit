@@ -1,3 +1,16 @@
 #!/bin/bash
 
-go build && ( cat data.json | go run collect.go )
+go build && ( 
+cat data.json | go run collect.go -command='{
+  "echo":false,
+  "gstat":true,
+  "stat":false,
+  "selected":[
+    "msg",
+    "session",
+    "counter",
+    "throughput",
+    "latency"
+  ]
+}'
+)
