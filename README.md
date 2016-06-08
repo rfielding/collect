@@ -42,6 +42,4 @@ Executing ./runit will produce output according to how the script was configured
 ```	
 {"msg"="gstat","counter"="txn up","throughput"="22.578759","latency"="74267.500000"}
 {"msg"="gstat","counter"="txn down","throughput"="1.024600","latency"="5000.000000"}
-rfielding@rfielding-Inspiron-3521:~/goworkspace/src/github.com/rfielding/collect$ 
-
 ```
