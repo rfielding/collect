@@ -1,0 +1,10 @@
+{"msg":"txn begin","level":"info","ts":100,"fields":{"session":"6"}}
+{"msg":"txn begin","level":"info","ts":2013,"fields":{"session":"43"}}
+{"msg":"txn up","level":"info","ts":3023,"fields":{"session":"43","bytes":104813}}
+{"msg":"txn begin","level":"info","ts":5000,"fields":{"session":"42"}}
+{"msg":"txn down","level":"info","ts":5300,"fields":{"session":"42","bytes":5123}}
+{"msg":"txn end","level":"info","ts":10000,"fields":{"session":"42"}}
+{"msg":"txn end","level":"info","ts":50324,"fields":{"session":"43"}}
+{"msg":"txn up","level":"info","ts":90300,"fields":{"session":"6","bytes":3248923}}
+{"msg":"txn end","level":"info","ts":100324,"fields":{"session":"6"}}
+

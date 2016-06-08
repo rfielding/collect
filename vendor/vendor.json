@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "qFtgbJQerpeOQbonklbuq8Zoers=",
+			"path": "github.com/uber-go/atomic",
+			"revision": "e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22",
+			"revisionTime": "2016-06-01T00:23:56Z"
+		},
+		{
+			"checksumSHA1": "S8DzOpoy0FjtcvHQL+q7r36Wisc=",
+			"path": "github.com/uber-go/zap",
+			"revision": "e73195ff194b372e7e083db9df8da1d6c3695a41",
+			"revisionTime": "2016-06-06T19:40:07Z"
+		}
+	],
+	"rootPath": "github.com/rfielding/collect"
+}
